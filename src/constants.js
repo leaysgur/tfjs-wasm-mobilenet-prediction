@@ -1,67 +1,7 @@
-const { tf } = window;
-const IMAGE_SIZE = 224;
+export const MODEL_NAME = "mobilenet_v1_1.0_224";
+export const IMAGE_SIZE = 224;
 
-(async () => {
-  await tf.setBackend("wasm");
-  console.warn("wasm backend");
-
-  const mobilenet = await tf.loadLayersModel(
-    "https://storage.googleapis.com/tfjs-models/tfjs/mobilenet_v1_1.0_224/model.json"
-  );
-  mobilenet.predict(tf.zeros([1, IMAGE_SIZE, IMAGE_SIZE, 3])).dispose();
-  console.warn("model loaded", mobilenet);
-
-  console.time("predict");
-  const classes = await predict(mobilenet, document.getElementById("img"));
-  console.timeEnd("predict");
-
-  for (const cls of classes) {
-    console.log(cls);
-  }
-})();
-
-async function predict(mobilenet, imgElement) {
-  // The first start time includes the time it takes to extract the image
-  // from the HTML and preprocess it, in additon to the predict() call.
-  const startTime1 = performance.now();
-  // The second start time excludes the extraction and preprocessing and
-  // includes only the predict() call.
-  let startTime2;
-  const logits = tf.tidy(() => {
-    const img = tf.browser
-      .fromPixels(imgElement)
-      .resizeBilinear([IMAGE_SIZE, IMAGE_SIZE])
-      .expandDims(0)
-      .toFloat();
-    // tf.browser.fromPixels() returns a Tensor from an image element.
-    // const img = tf.browser.fromPixels(imgElement).toFloat();
-
-    const offset = tf.scalar(127.5);
-    // Normalize the image from [0, 255] to [-1, 1].
-    const normalized = img.sub(offset).div(offset);
-
-    // Reshape to a single-element batch so we can pass it to predict.
-    const batched = normalized.reshape([1, IMAGE_SIZE, IMAGE_SIZE, 3]);
-
-    startTime2 = performance.now();
-    // Make a prediction through mobilenet.
-    return mobilenet.predict(batched);
-  });
-
-  // Convert logits to probabilities and class names.
-  const classes = await getTopKClasses(logits, 10);
-  const totalTime1 = performance.now() - startTime1;
-  const totalTime2 = performance.now() - startTime2;
-  console.log(
-    `Done in ${Math.floor(totalTime1)} ms ` +
-      `(not including preprocessing: ${Math.floor(totalTime2)} ms)`
-  );
-
-  // Show the classes in the DOM.
-  return classes;
-}
-
-const IMAGENET_CLASSES = {
+export const IMAGENET_CLASSES = {
   0: "tench, Tinca tinca",
   1: "goldfish, Carassius auratus",
   2:
@@ -1105,31 +1045,3 @@ const IMAGENET_CLASSES = {
   998: "ear, spike, capitulum",
   999: "toilet tissue, toilet paper, bathroom tissue"
 };
-
-async function getTopKClasses(logits, topK) {
-  const values = await logits.data();
-
-  const valuesAndIndices = [];
-  for (let i = 0; i < values.length; i++) {
-    valuesAndIndices.push({ value: values[i], index: i });
-  }
-  valuesAndIndices.sort((a, b) => {
-    return b.value - a.value;
-  });
-
-  const topkValues = new Float32Array(topK);
-  const topkIndices = new Int32Array(topK);
-  for (let i = 0; i < topK; i++) {
-    topkValues[i] = valuesAndIndices[i].value;
-    topkIndices[i] = valuesAndIndices[i].index;
-  }
-
-  const topClassesAndProbs = [];
-  for (let i = 0; i < topkIndices.length; i++) {
-    topClassesAndProbs.push({
-      className: IMAGENET_CLASSES[topkIndices[i]],
-      probability: topkValues[i]
-    });
-  }
-  return topClassesAndProbs;
-}

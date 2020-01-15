@@ -3,14 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <title>tfjs-backend-wasm</title>
+  <style>
+    .container {
+      display: grid;
+      grid-template-columns: 50% 50%;
+    }
+    .res {
+      background-color: #eee;
+      margin: 0;
+    }
+    .img {
+      width: 100%;
+    }
+  </style>
 </head>
 <body>
-  <img src="./imgs/cat.jpg" id="img">
-  <!-- <img src="./imgs/penguin.jpg" id="img"> -->
+  <div class="container">
+    <div>
+      <p>
+        Add `?nowasm` param to try w/o WASM.
+      </p>
+      <img class="img" src="./imgs/cat.jpg" id="img">
+    </div>
+    <pre class="res" id="result">Predictions will be here..</pre>
+  </div>
 
   <script src="./vendors/tfjs.js"></script>
   <script src="./vendors/tfjs-backend-wasm.js"></script>
 
-  <script src="./main.js"></script>
+  <script src="./src/main.js" type="module"></script>
 </body>
 </html>
